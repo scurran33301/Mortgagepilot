@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MortgagePilot</title>
+<style>
+body{margin:0;background:#f4f6f8;color:#17212b;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#173b5f;color:#fff;padding:22px 18px;font-weight:800;font-size:21px}
+main{max-width:850px;margin:24px auto;padding:0 16px}.card{background:#fff;border:1px solid #e1e6eb;border-radius:16px;padding:20px;margin-bottom:18px}
+h1{font-size:32px;line-height:1.1;margin:0 0 8px}p{color:#687583}
+label{display:block;font-weight:700;font-size:13px;margin:13px 0 6px}
+input{width:100%;height:44px;box-sizing:border-box;border:1px solid #ccd5dd;border-radius:9px;padding:0 11px;font-size:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+button{width:100%;height:48px;border:0;border-radius:9px;background:#173b5f;color:white;font-size:16px;font-weight:800;margin-top:18px}
+.results{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result{background:#f5f7f9;border-radius:10px;padding:14px}.result small{color:#687583;font-weight:700}.result strong{display:block;font-size:22px;margin-top:4px}
+.green strong{color:#17754b}.answer{background:#edf7f1;border:1px solid #d2e9dc;border-radius:10px;padding:14px;margin-top:12px}.answer strong{color:#17754b;font-size:22px}
+#error{display:none;background:#fff0f0;color:#a51d1d;padding:10px;border-radius:8px;margin-top:10px;font-size:13px}
+@media(max-width:600px){.grid,.results{grid-template-columns:1fr}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<header>MortgagePilot</header>
+<main>
+<div class="card">
+<h1>Mortgage overpayment calculator</h1>
+<p>Enter your mortgage details and see the effect of overpaying.</p>
+<div class="grid">
+<div><label for="balance">Mortgage balance (£)</label><input id="balance" type="number" value="471500" min="1"></div>
+<div><label for="rate">Interest rate (%)</label><input id="rate" type="number" value="2.25" min="0" step="0.01"></div>
+<div><label for="years">Years remaining</label><input id="years" type="number" value="25" min="1"></div>
+<div><label for="overpay">Monthly overpayment (£)</label><input id="overpay" type="number" value="500" min="0"></div>
+</div>
+<button id="calculate">Calculate</button>
+<div id="error"></div>
+</div>
+<div class="card">
+<div class="results">
+<div class="result"><small>Normal payment</small><strong id="payment">—</strong></div>
+<div class="result green"><small>Interest saved</small><strong id="saved">—</strong></div>
+<div class="result green"><small>Time saved</small><strong id="time">—</strong></div>
+</div>
+<div class="answer">Mortgage-free date with overpayment<br><strong id="date">—</strong></div>
+</div>
+</main>
+<script>
+function money(n){return new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:0}).format(n);}
+function monthsText(n){var y=Math.floor(n/12),m=n%12;return y+"y "+m+"m";}
+function mortgage(balance,rate,years,extra){
+ var r=rate/100/12,n=years*12;
+ var payment=r===0?balance/n:balance*r/(1-Math.pow(1+r,-n));
+ var b=balance,interest=0,months=0;
+ while(b>0.01 && months<1200){
+  months++;
+  var i=b*r;
+  var scheduled=Math.min(payment,b+i);
+  b=b+i-scheduled-extra;
+  if(b<0)b=0;
+  interest+=i;
+ }
+ return {payment:payment,interest:interest,months:months};
+}
+function calculate(){
+ var error=document.getElementById("error");
+ try{
+  var b=Number(document.getElementById("balance").value);
+  var r=Number(document.getElementById("rate").value);
+  var y=Number(document.getElementById("years").value);
+  var x=Number(document.getElementById("overpay").value)||0;
+  if(!(b>0)||r<0||!(y>0)||x<0)throw Error("Please enter valid figures.");
+  var normal=mortgage(b,r,y,0), paid=mortgage(b,r,y,x);
+  document.getElementById("payment").textContent=money(normal.payment);
+  document.getElementById("saved").textContent=money(Math.max(0,normal.interest-paid.interest));
+  document.getElementById("time").textContent=monthsText(Math.max(0,normal.months-paid.months));
+  var d=new Date();d.setMonth(d.getMonth()+paid.months);
+  document.getElementById("date").textContent=d.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  error.style.display="none";
+ }catch(e){error.textContent=e.message;error.style.display="block";}
+}
+document.getElementById("calculate").addEventListener("click",calculate);
+calculate();
+</script>
+</body>
+</html>
